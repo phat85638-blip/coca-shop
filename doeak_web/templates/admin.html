@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>BFX // ADMIN PANEL</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}" />
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=JetBrains+Mono:wght@400;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet" />
+    <style>
+        .admin-container { max-width: 1200px; margin: 0 auto; padding: 20px; }
+        .admin-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid rgba(0,246,255,0.12); padding-bottom: 16px; margin-bottom: 24px; }
+        .admin-stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px,1fr)); gap: 16px; margin-bottom: 30px; }
+        .stat-card { background: rgba(255,255,255,0.02); border: 1px solid rgba(0,246,255,0.06); border-radius: 4px; padding: 16px 20px; text-align: center; }
+        .stat-card .number { font-family: 'Orbitron', sans-serif; font-size: 2rem; color: #00F6FF; }
+        .stat-card .label { font-size: 0.7rem; color: #6B7280; text-transform: uppercase; letter-spacing: 1px; }
+        .admin-table { width: 100%; border-collapse: collapse; font-size: 0.8rem; }
+        .admin-table th { text-align: left; padding: 10px 12px; border-bottom: 1px solid rgba(0,246,255,0.06); color: #00F6FF; font-family: 'Orbitron', sans-serif; font-size: 0.65rem; letter-spacing: 1px; }
+        .admin-table td { padding: 10px 12px; border-bottom: 1px solid rgba(255,255,255,0.03); color: #D1D5DB; }
+        .status-badge { padding: 2px 12px; border-radius: 12px; font-size: 0.65rem; font-weight: 600; }
+        .status-badge.pending { background: rgba(245,158,11,0.15); color: #F59E0B; }
+        .status-badge.processing { background: rgba(59,130,246,0.15); color: #3B82F6; }
+        .status-badge.completed { background: rgba(34,197,94,0.15); color: #22C55E; }
+        .status-badge.cancelled { background: rgba(239,68,68,0.15); color: #EF4444; }
+        .admin-login-box { max-width: 380px; margin: 60px auto; background: rgba(255,255,255,0.015); border: 1px solid rgba(0,246,255,0.06); border-radius: 4px; padding: 30px; text-align: center; }
+        .admin-login-box input { width: 100%; padding: 12px 16px; margin-bottom: 12px; background: rgba(255,255,255,0.03); border: 1px solid rgba(0,246,255,0.06); border-radius: 3px; color: #E6F7FF; font-size: 0.9rem; outline: none; }
+        .admin-login-box input:focus { border-color: rgba(0,246,255,0.2); }
+        .admin-login-box .btn-glow { width: 100%; text-align: center; padding: 12px; }
+        .admin-login-box .error-msg { color: #FF007A; font-size: 0.8rem; margin-top: 10px; }
+        .admin-logout-btn { background: transparent; border: 1px solid rgba(255,255,255,0.06); color: #9CA3AF; padding: 6px 20px; border-radius: 3px; cursor: pointer; font-family: 'JetBrains Mono', monospace; font-size: 0.7rem; transition: 0.3s; }
+        .admin-logout-btn:hover { border-color: #FF007A; color: #FF007A; }
+    </style>
+</head>
+<body>
+    <div class="grid-bg"></div>
+    <div class="scanline"></div>
+
+    <div id="admin-login-section" class="admin-container">
+        <div class="admin-login-box">
+            <h2 style="font-family:'Orbitron',sans-serif;color:#00F6FF;font-size:1.4rem;margin-bottom:20px;">⎔ ADMIN</h2>
+            <input type="text" id="admin-username" placeholder="Tên đăng nhập" value="admin" />
+            <input type="password" id="admin-password" placeholder="Mật khẩu" value="admin123" />
+            <button id="admin-login-btn" class="btn-glow">▶ LOGIN</button>
+            <div id="admin-login-msg" class="error-msg"></div>
+        </div>
+    </div>
+
+    <div id="admin-panel-section" class="admin-container" style="display:none;">
+        <div class="admin-header">
+            <h1 style="font-family:'Orbitron',sans-serif;font-size:1.4rem;color:#00F6FF;">⎔ ADMIN PANEL</h1>
+            <button id="admin-logout-btn" class="admin-logout-btn">LOGOUT</button>
+        </div>
+
+        <div class="admin-stats" id="admin-stats">
+            <div class="stat-card"><div class="number" id="stat-users">0</div><div class="label">Người dùng</div></div>
+            <div class="stat-card"><div class="number" id="stat-orders">0</div><div class="label">Tổng đơn hàng</div></div>
+            <div class="stat-card"><div class="number" id="stat-revenue">0</div><div class="label">Doanh thu (K)</div></div>
+            <div class="stat-card"><div class="number" id="stat-pending">0</div><div class="label">Đơn chờ</div></div>
+        </div>
+
+        <h3 style="font-family:'Orbitron',sans-serif;font-size:0.9rem;color:#00F6FF;margin-bottom:16px;letter-spacing:1px;">📋 DANH SÁCH ĐƠN HÀNG</h3>
+        <div style="overflow-x:auto;">
+            <table class="admin-table" id="orders-table">
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Khách hàng</th>
+                        <th>Dịch vụ</th>
+                        <th>Thẻ</th>
+                        <th>Tiền</th>
+                        <th>Trạng thái</th>
+                        <th>Thời gian</th>
+                        <th>Thao tác</th>
+                    </tr>
+                </thead>
+                <tbody id="orders-body">
+                    <tr><td colspan="8" style="text-align:center;color:#6B7280;">Chưa có đơn hàng.</td></tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <script src="{{ url_for('static', filename='script.js') }}"></script>
+    <script>
+        // Admin logic
+        const loginSection = document.getElementById('admin-login-section');
+        const panelSection = document.getElementById('admin-panel-section');
+
+        function checkAdminAuth() {
+            fetch('/api/check_auth')
+                .then(res => res.json())
+                .then(data => {
+                    if (data.logged_in && data.is_admin) {
+                        loginSection.style.display = 'none';
+                        panelSection.style.display = 'block';
+                        loadAdminData();
+                    } else {
+                        loginSection.style.display = 'block';
+                        panelSection.style.display = 'none';
+                    }
+                });
+        }
+
+        function loadAdminData() {
+            // Stats
+            fetch('/api/admin/stats')
+                .then(res => res.json())
+                .then(data => {
+                    if (data.success) {
+                        document.getElementById('stat-users').textContent = data.total_users;
+                        document.getElementById('stat-orders').textContent = data.total_orders;
+                        document.getElementById('stat-revenue').textContent = data.total_revenue;
+                        document.getElementById('stat-pending').textContent = data.pending_orders;
+                    }
+                });
+
+            // Orders
+            fetch('/api/orders')
+                .then(res => res.json())
+                .then(data => {
+                    const tbody = document.getElementById('orders-body');
+                    if (data.success && data.orders.length > 0) {
+                        tbody.innerHTML = data.orders.map(o => `
+                            <tr>
+                                <td><span style="color:#6B7280;">${o.id}</span></td>
+                                <td>${o.username}</td>
+                                <td>${o.service}</td>
+                                <td>${o.card_type || '-'}</td>
+                                <td>${o.amount}K</td>
+                                <td><span class="status-badge ${o.status}">${o.status.toUpperCase()}</span></td>
+                                <td style="font-size:0.65rem;color:#6B7280;">${new Date(o.created_at).toLocaleString()}</td>
+                                <td>
+                                    <select onchange="updateOrderStatus('${o.id}', this.value)" style="background:rgba(255,255,255,0.03);border:1px solid rgba(0,246,255,0.06);border-radius:3px;color:#E6F7FF;padding:4px 8px;font-size:0.7rem;">
+                                        <option value="pending" ${o.status=='pending'?'selected':''}>Chờ</option>
+                                        <option value="processing" ${o.status=='processing'?'selected':''}>Đang làm</option>
+                                        <option value="completed" ${o.status=='completed'?'selected':''}>Hoàn thành</option>
+                                        <option value="cancelled" ${o.status=='cancelled'?'selected':''}>Hủy</option>
+                                    </select>
+                                </td>
+                            </tr>
+                        `).join('');
+                    } else {
+                        tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;color:#6B7280;">Chưa có đơn hàng.</td></tr>';
+                    }
+                });
+        }
+
+        function updateOrderStatus(orderId, newStatus) {
+            fetch('/api/order/update', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ order_id: orderId, status: newStatus })
+            })
+            .then(res => res.json())
+            .then(data => {
+                if (data.success) loadAdminData();
+                else alert('Lỗi: ' + data.message);
+            });
+        }
+
+        document.getElementById('admin-login-btn').addEventListener('click', function() {
+            const username = document.getElementById('admin-username').value;
+            const password = document.getElementById('admin-password').value;
+            const msg = document.getElementById('admin-login-msg');
+            fetch('/api/admin/login', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ username, password })
+            })
+            .then(res => res.json())
+            .then(data => {
+                if (data.success) {
+                    msg.textContent = '';
+                    checkAdminAuth();
+                } else {
+                    msg.textContent = data.message;
+                }
+            });
+        });
+
+        document.getElementById('admin-logout-btn').addEventListener('click', function() {
+            fetch('/api/logout', { method: 'POST' })
+                .then(() => checkAdminAuth());
+        });
+
+        checkAdminAuth();
+    </script>
+</body>
+</html>

@@ -1,0 +1,10 @@
+services:
+  - type: web
+    name: bfx
+    runtime: python
+    plan: free
+    buildCommand: pip install -r requirements.txt
+    startCommand: gunicorn app:app
+    envVars:
+      - key: SECRET_KEY
+        value: bfx_secret_key_2026
